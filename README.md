@@ -11,4 +11,4 @@ Indicar o caminho do ficheiro de excel (.xlsx);
 2ª Pergunta:
 Indicar o caminho da pasta onde se encontra o/s ficheiro/s;
 
-![Imagem de Exemplo](imagens\script.png)
+![Imagem de Exemplo](imagens/script.png)
