@@ -1,10 +1,10 @@
 import os
 from docx import Document
 import re
+import openpyxl
 
-def substituir_texto(arquivo, texto_antigo, texto_novo, pasta_saida):
+def substituir_texto(arquivo, texto_antigo, texto_novo):
     doc = Document(arquivo)
-    texto_antigo_lower = texto_antigo.lower()
 
     def substituir_em_runs(runs):
         texto_completo = "".join(run.text for run in runs)
@@ -25,50 +25,57 @@ def substituir_texto(arquivo, texto_antigo, texto_novo, pasta_saida):
             for celula in linha.cells:
                 for paragrafo in celula.paragraphs:
                     substituir_em_runs(paragrafo.runs)
-
-    nome_relativo = os.path.relpath(arquivo, start=pasta_base)
-    caminho_saida = os.path.join(pasta_saida, nome_relativo)
-    pasta_destino = os.path.dirname(caminho_saida)
-    if not os.path.exists(pasta_destino):
-        os.makedirs(pasta_destino)
-    caminho_saida = caminho_saida.replace(".docx", "_modificado.docx")
     
-    doc.save(caminho_saida)
-    print(f"Substituição concluída: {caminho_saida}")
+    doc.save(arquivo)
+
+
+def processar_texto(arquivo_xlsx, caminho_arquivos=None):
+    workbook = openpyxl.load_workbook(arquivo_xlsx)
+    sheet = workbook.active
+
+    substituicoes = []
+    for row in sheet.iter_rows(min_row=1, values_only=True):
+        if len(row) >= 2:
+            texto_antigo, texto_novo = row[0], row[1]
+            substituicoes.append((texto_antigo, texto_novo))
+
+    if caminho_arquivos:
+        for arquivo in os.listdir(caminho_arquivos):
+            if arquivo.endswith(".docx"):
+                caminho_completo = os.path.join(caminho_arquivos, arquivo)
+                for texto_antigo, texto_novo in substituicoes:
+                    substituir_texto(caminho_completo, texto_antigo, texto_novo)
+    else:
+        print("Nenhum caminho de arquivos especificado.")
+
+    workbook.close()
+
+
 
 if __name__ == "__main__":
-    # Diretório base
-    pasta_base = os.path.join(os.path.expanduser("~"), "Documents", "change")
+    
+    print("Bem-vindo ao programa de substituição de texto em documentos Word!")
+    
+    # Perguntar ao utilizador pelo caminho do arquivo Excel
+    while True:
+        arquivo_xlsx = input("Digite o caminho completo do arquivo Excel (.xlsx): ").strip()
+        if arquivo_xlsx.lower().endswith('.xlsx') and os.path.isfile(arquivo_xlsx):
+            break
+        else:
+            print("Erro: O arquivo deve ter a extensão .xlsx e existir. Tente novamente.")
 
-    if not os.path.exists(pasta_base):
-        print(f"Erro: A pasta '{pasta_base}' não existe.")
-        exit(1)
+    # Perguntar ao utilizador pelo caminho da pasta com os documentos Word
+    while True:
+        pasta_docx = input("Digite o caminho da pasta contendo os documentos Word: ").strip()
+        if os.path.isdir(pasta_docx):
+            break
+        else:
+            print("Erro: O caminho especificado não é uma pasta válida. Tente novamente.")
 
-    # Perguntar o nome da pasta de saída
-    nome_pasta_saida = input("Digite o nome da pasta de saída: ").strip()
-    pasta_saida = os.path.join(pasta_base, nome_pasta_saida)
+    print(f"\nProcessando arquivos na pasta: {pasta_docx}")
+    print(f"Usando substituições do arquivo: {arquivo_xlsx}\n")
 
-    if not os.path.exists(pasta_saida):
-        os.makedirs(pasta_saida)
-        print(f"Pasta de saída criada: {pasta_saida}")
+    arquivos_processados = processar_texto(arquivo_xlsx, pasta_docx)
 
-    texto_antigo = input("Digite a palavra ou frase que deseja substituir: ").strip()
-    texto_novo = input("Digite a nova palavra ou frase: ").strip()
-
-    arquivos_encontrados = []
-
-    # Busca recursiva por .docx
-    for raiz, _, arquivos in os.walk(pasta_base):
-        for arquivo in arquivos:
-            if arquivo.endswith(".docx") and not arquivo.endswith("_modificado.docx"):
-                caminho_completo = os.path.join(raiz, arquivo)
-                arquivos_encontrados.append(caminho_completo)
-
-    if not arquivos_encontrados:
-        print("Nenhum arquivo .docx encontrado na pasta 'Documents/change'.")
-        exit(1)
-
-    for caminho_arquivo in arquivos_encontrados:
-        substituir_texto(caminho_arquivo, texto_antigo, texto_novo, pasta_saida)
-
-    print("Processamento concluído para todos os arquivos.")
+    print(f"\nProcessamento concluído!")
+    print(f"Total de arquivos processados: {arquivos_processados}")
